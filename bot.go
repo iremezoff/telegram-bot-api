@@ -115,13 +115,13 @@ func (bot *BotAPI) decodeAPIResponse(responseBody io.Reader, resp *APIResponse) 
 }
 
 // makeMessageRequest makes a request to a method that returns a Message.
-func (bot *BotAPI) makeMessageRequest(endpoint string, params url.Values) (Message, error) {
+func (bot *BotAPI) makeMessageRequest(endpoint string, params url.Values) ([]Message, error) {
 	resp, err := bot.MakeRequest(endpoint, params)
 	if err != nil {
-		return Message{}, err
+		return []Message{}, err
 	}
 
-	var message Message
+	var message []Message
 	json.Unmarshal(resp.Result, &message)
 
 	bot.debugLog(endpoint, params, message)
@@ -266,10 +266,11 @@ func (bot *BotAPI) IsMessageToMe(message Message) bool {
 // Send will send a Chattable item to Telegram.
 //
 // It requires the Chattable to send.
-func (bot *BotAPI) Send(c Chattable) (Message, error) {
+func (bot *BotAPI) Send(c Chattable) ([]Message, error) {
 	switch c.(type) {
 	case Fileable:
-		return bot.sendFile(c.(Fileable))
+		msg, err := bot.sendFile(c.(Fileable))
+		return []Message{msg}, err
 	default:
 		return bot.sendChattable(c)
 	}
@@ -298,7 +299,7 @@ func (bot *BotAPI) sendExisting(method string, config Fileable) (Message, error)
 		return Message{}, err
 	}
 
-	return message, nil
+	return message[0], nil
 }
 
 // uploadAndSend will send a Message with a new file to Telegram.
@@ -334,16 +335,16 @@ func (bot *BotAPI) sendFile(config Fileable) (Message, error) {
 }
 
 // sendChattable sends a Chattable.
-func (bot *BotAPI) sendChattable(config Chattable) (Message, error) {
+func (bot *BotAPI) sendChattable(config Chattable) ([]Message, error) {
 	v, err := config.values()
 	if err != nil {
-		return Message{}, err
+		return []Message{}, err
 	}
 
 	message, err := bot.makeMessageRequest(config.method(), v)
 
 	if err != nil {
-		return Message{}, err
+		return []Message{}, err
 	}
 
 	return message, nil
